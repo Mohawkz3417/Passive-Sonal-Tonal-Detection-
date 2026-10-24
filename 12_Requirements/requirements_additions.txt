@@ -1,0 +1,26 @@
+# New dependencies added on top of 12_Requirements/requirements.txt for the
+# multi-channel array + Signal Generator app + Detection Backend app +
+# testing UI work. The original requirements.txt is UNCHANGED.
+#
+# Install with:
+#   pip install -r 12_Requirements/requirements.txt
+#   pip install -r 12_Requirements/requirements_additions.txt
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9   # required by FastAPI for file uploads (/api/analyze_wav, /api/analyze_mp3)
+websockets>=12.0          # /ws/live
+pydub>=0.25                # MP3 decoding (requires the ffmpeg command-line binary on PATH)
+joblib>=1.3                 # saving/loading the trained RandomForest classifier
+
+# test-only:
+pytest>=7.4                 # already in requirements.txt, listed again for clarity
+httpx2>=2.13                 # required by starlette.testclient.TestClient in this environment's
+                              # installed starlette version (test_09 only)
+
+# NOTE ON MP3 SUPPORT: pydub shells out to the `ffmpeg` binary. If MP3
+# analysis fails with a decode error, install ffmpeg itself (not just the
+# Python package), e.g.:
+#   Ubuntu/Debian: sudo apt install ffmpeg
+#   Windows: https://ffmpeg.org/download.html  (add to PATH)
+#   Mac: brew install ffmpeg

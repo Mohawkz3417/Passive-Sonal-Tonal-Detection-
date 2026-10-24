@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NPOL Signal Generator (Testing)</title>
+<style>
+  body { font-family: monospace; background:#111; color:#ddd; padding:20px; }
+  fieldset { border:1px solid #444; margin-bottom:12px; }
+  label { display:inline-block; width:170px; }
+  input, select { background:#222; color:#eee; border:1px solid #555; padding:3px; width:140px; }
+  button { padding:8px 16px; margin-right:8px; margin-top:6px; cursor:pointer; }
+  #info, #warnings { white-space:pre-wrap; background:#000; padding:10px; border:1px solid #333; }
+  #warnings { color:#e6b800; }
+  canvas { background:#000; border:1px solid #333; }
+  .row { margin-bottom:6px; }
+</style>
+</head>
+<body>
+<h2>NPOL Signal Generator -- Testing UI</h2>
+<p>Not the final UI. Purpose: configure and generate real multi-channel array data, then transmit/save it.</p>
+
+<fieldset>
+<legend>Signal</legend>
+<div class="row"><label>Signal type</label>
+  <select id="signal_type"><option>Ship-like</option><option>Biological</option><option>Unknown</option></select></div>
+<div class="row"><label>Frequency (Hz)</label><input id="frequency_hz" type="number" value="443"></div>
+<div class="row"><label>SNR (dB)</label><input id="snr_db" type="number" value="-7"></div>
+<div class="row"><label>Noise type</label>
+  <select id="noise_type"><option>shipping</option><option>biological</option><option>environmental</option><option>background</option></select></div>
+<div class="row"><label>Doppler</label>
+  <select id="doppler"><option value="false">OFF</option><option value="true">ON</option></select></div>
+<div class="row"><label>Harmonics</label>
+  <select id="harmonics"><option value="true">ON</option><option value="false">OFF</option></select></div>
+<div class="row"><label>Freq drift (Hz)</label><input id="drift_hz" type="number" value="0.3" step="0.1"></div>
+</fieldset>
+
+<fieldset>
+<legend>Array</legend>
+<div class="row"><label>Bearing (deg)</label><input id="bearing_deg" type="number" value="37"></div>
+<div class="row"><label>Hydrophones</label><input id="n_hydrophones" type="number" value="8"></div>
+<div class="row"><label>Spacing (m)</label><input id="array_spacing_m" type="number" value="0.2" step="0.05"></div>
+<div class="row"><label>Sampling rate (Hz)</label><input id="sampling_rate" type="number" value="16000"></div>
+<div class="row"><label>Duration (s)</label><input id="duration_s" type="number" value="30"></div>
+</fieldset>
+
+<button onclick="generate()">GENERATE SIGNAL</button>
+<button onclick="transmit()">TRANSMIT VIA ETHERNET</button>
+<button onclick="saveWav()">SAVE WAV</button>
+<button onclick="saveArray()">SAVE ARRAY DATA</button>
+
+<fieldset>
+<legend>Transmit target</legend>
+<div class="row"><label>Host</label><input id="host" value="127.0.0.1"></div>
+<div class="row"><label>Port</label><input id="port" type="number" value="50001"></div>
+</fieldset>
+
+<h3>Signal info (real, from last /api/generate call)</h3>
+<div id="info">(nothing generated yet)</div>
+<div id="warnings"></div>
+
+<h3>Channel 1 preview</h3>
+<canvas id="preview" width="900" height="150"></canvas>
+
+<script>
+async function post(url, body) {
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
+async function get(url) {
+  const r = await fetch(url);
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
+
+function readForm() {
+  return {
+    signal_type: document.getElementById('signal_type').value,
+    frequency_hz: parseFloat(document.getElementById('frequency_hz').value),
+    snr_db: parseFloat(document.getElementById('snr_db').value),
+    noise_type: document.getElementById('noise_type').value,
+    doppler: document.getElementById('doppler').value === 'true',
+    harmonics: document.getElementById('harmonics').value === 'true',
+    drift_hz: parseFloat(document.getElementById('drift_hz').value),
+    bearing_deg: parseFloat(document.getElementById('bearing_deg').value),
+    n_hydrophones: parseInt(document.getElementById('n_hydrophones').value),
+    array_spacing_m: parseFloat(document.getElementById('array_spacing_m').value),
+    sampling_rate: parseFloat(document.getElementById('sampling_rate').value),
+    duration_s: parseFloat(document.getElementById('duration_s').value),
+  };
+}
+
+async function generate() {
+  try {
+    const info = await post('/api/generate', readForm());
+    document.getElementById('info').textContent = JSON.stringify(info, null, 2);
+    document.getElementById('warnings').textContent = (info.warnings && info.warnings.length) ? info.warnings.join('\n') : '';
+    await drawPreview();
+  } catch (e) { alert('Generate failed: ' + e.message); }
+}
+
+async function drawPreview() {
+  const p = await get('/api/preview');
+  const c = document.getElementById('preview');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle = '#0f0';
+  ctx.beginPath();
+  const vals = p.values;
+  const maxAbs = Math.max(1e-6, ...vals.map(Math.abs));
+  vals.forEach((v,i) => {
+    const x = i / vals.length * c.width;
+    const y = c.height/2 - (v/maxAbs) * (c.height/2 - 5);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+async function transmit() {
+  try {
+    const body = {host: document.getElementById('host').value, port: parseInt(document.getElementById('port').value), realtime: true};
+    const r = await post('/api/transmit', body);
+    alert('Transmitted ' + r.packets_sent + ' packets to ' + r.host + ':' + r.port);
+  } catch (e) { alert('Transmit failed: ' + e.message); }
+}
+async function saveWav() {
+  try { const r = await post('/api/save_wav'); alert('Saved: ' + r.path); } catch (e) { alert(e.message); }
+}
+async function saveArray() {
+  try { const r = await post('/api/save_array'); alert('Saved: ' + r.path); } catch (e) { alert(e.message); }
+}
+</script>
+</body>
+</html>

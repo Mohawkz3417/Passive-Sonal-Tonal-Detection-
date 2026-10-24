@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+
+# --- Node / frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+frontend/tsconfig.node.tsbuildinfo
+npm-debug.log*
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Runtime-generated data (regenerate, don't commit) ---
+logs/*.csv
+logs/*.txt
+10_Datasets/real_uploads/*
+!10_Datasets/real_uploads/.gitkeep
+06_Model_Evaluation/real_validation/*.csv
+06_Model_Evaluation/real_validation/*.json
+
+# --- Large training checkpoints outside the tracked "active" ones ---
+# (11_Weights/active/segformer_b0_tonal.pt and 11_Weights/unet_tonal.pt ARE
+#  tracked on purpose -- this project ships trained weights so it runs
+#  out of the box. Only ad-hoc/experimental checkpoints are ignored.)
+11_Weights/archive/*.pt
+*.onnx
+*.torchscript.pt
+
+# --- Env / secrets (none used by this project, but standard hygiene) ---
+.env
+.env.local

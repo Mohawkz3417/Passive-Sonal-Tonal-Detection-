@@ -1,0 +1,8 @@
+{
+  "n_files": 30,
+  "n_detected": 7,
+  "datasets": [
+    "ocean_ambient"
+  ],
+  "note": "Segmentation-level metrics (precision/recall/F1/IoU) are NOT computed here -- these datasets do not ship per-frequency tonal ground truth. bearing_deg is null for all rows because these are mono recordings (no array). This is a qualitative pipeline-execution validation, not a statistical performance benchmark -- see module docstring."
+}

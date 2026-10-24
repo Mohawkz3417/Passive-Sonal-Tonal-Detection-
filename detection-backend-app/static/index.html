@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NPOL Detection Backend (Testing UI)</title>
+<style>
+  body { font-family: monospace; background:#111; color:#ddd; padding:20px; }
+  fieldset { border:1px solid #444; margin-bottom:14px; }
+  legend { font-weight:bold; }
+  .ok { color:#5f5; } .bad { color:#f55; } .warn { color:#e6b800; }
+  table { border-collapse: collapse; } td, th { border:1px solid #444; padding:4px 10px; text-align:left; }
+  canvas { background:#000; border:1px solid #333; }
+  #log { white-space:pre-wrap; background:#000; padding:8px; border:1px solid #333; height:120px; overflow-y:auto; font-size:12px; }
+  .grid { display:flex; gap:20px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<h2>NPOL Detection Backend -- Testing UI</h2>
+<p>Not the final UI. Purpose: prove the complete pipeline is actually working end to end, against the frozen API contract.</p>
+
+<div class="grid">
+<fieldset style="min-width:280px;">
+<legend>INPUT / NETWORK</legend>
+<div>Connection: <span id="conn">-</span></div>
+<div>Channels: <span id="n_channels">-</span></div>
+<div>Sample rate: <span id="sample_rate">-</span></div>
+<div>Packets received: <span id="packets_received">-</span></div>
+<div>Packets dropped (out of order): <span id="packets_dropped">-</span></div>
+</fieldset>
+
+<fieldset style="min-width:280px;">
+<legend>ARRAY / SENSORS</legend>
+<table id="hydrophones"></table>
+<div style="margin-top:6px;">Estimated bearing: <b id="bearing">-</b></div>
+<canvas id="beamplot" width="360" height="120"></canvas>
+</fieldset>
+
+<fieldset style="min-width:280px;">
+<legend>DETECTION</legend>
+<div>Detected: <b id="detected">-</b></div>
+<div>Frequency: <span id="freq">-</span></div>
+<div>Bearing available: <span id="bearing_avail">-</span></div>
+<div>Requested SNR: <span id="req_snr">-</span></div>
+<div>Measured SNR: <span id="meas_snr">-</span></div>
+<div>SegFormer confidence: <span id="segconf">-</span></div>
+<div>Classification: <span id="cls">-</span></div>
+<div>Classification confidence: <span id="clsconf">-</span></div>
+<div>Track: <span id="track">-</span></div>
+<div>Status: <span id="trackstatus">-</span></div>
+</fieldset>
+</div>
+
+<fieldset>
+<legend>SPECTROGRAM (magnitude, SegFormer detection_mask overlay in red)</legend>
+<canvas id="spectro" width="900" height="220"></canvas>
+</fieldset>
+
+<fieldset>
+<legend>PIPELINE STATUS</legend>
+<table id="pipeline"></table>
+<div>Frames processed: <span id="n_frames">-</span></div>
+<div class="bad" id="last_error"></div>
+</fieldset>
+
+<fieldset>
+<legend>MODEL</legend>
+<div id="model_info">-</div>
+</fieldset>
+
+<fieldset>
+<legend>Direct file test (bypasses Ethernet)</legend>
+<div>WAV: <input type="file" id="wavfile" accept=".wav"> <button onclick="analyzeFile('wavfile','/api/analyze_wav')">Analyze WAV</button></div>
+<div style="margin-top:6px;">NPZ: <input type="file" id="npzfile" accept=".npz"> <button onclick="analyzeFile('npzfile','/api/analyze_npz')">Analyze NPZ</button></div>
+<div style="margin-top:6px;">MP3: <input type="file" id="mp3file" accept=".mp3"> <button onclick="analyzeFile('mp3file','/api/analyze_mp3')">Analyze MP3</button></div>
+</fieldset>
+
+<h3>Log</h3>
+<div id="log"></div>
+
+<script>
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent += new Date().toLocaleTimeString() + '  ' + msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+function fmt(v, suffix) { return (v === null || v === undefined) ? '-' : (typeof v === 'number' ? v.toFixed(2) : v) + (suffix||''); }
+
+function renderStatus(s) {
+  const net = s.network || {};
+  document.getElementById('conn').textContent = net.connected ? 'CONNECTED' : 'NOT CONNECTED';
+  document.getElementById('conn').className = net.connected ? 'ok' : 'bad';
+  document.getElementById('n_channels').textContent = net.n_channels ?? '-';
+  document.getElementById('sample_rate').textContent = net.sample_rate_hz ?? '-';
+  document.getElementById('packets_received').textContent = net.packets_received ?? '-';
+  document.getElementById('packets_dropped').textContent = net.packets_dropped ?? '-';
+
+  const hy = document.getElementById('hydrophones');
+  hy.innerHTML = '';
+  (s.sensors || []).forEach(sensor => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${sensor.label}</td><td class="${sensor.online?'ok':'bad'}">${sensor.online?'ONLINE':'OFFLINE'}</td>`;
+    hy.appendChild(row);
+  });
+
+  const pipe = document.getElementById('pipeline');
+  pipe.innerHTML = '';
+  Object.entries(s.pipeline || {}).forEach(([k,v]) => {
+    const cls = v === 'READY' || v === 'RUNNING' ? 'ok' : (v === 'WARNING' ? 'warn' : 'bad');
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${k}</td><td class="${cls}">${v}</td>`;
+    pipe.appendChild(row);
+  });
+  document.getElementById('n_frames').textContent = (s.system && s.system.n_frames_processed) ?? 0;
+  document.getElementById('last_error').textContent = (s.warnings && s.warnings.length) ? s.warnings.join('; ') : '';
+
+  const m = s.model || {};
+  document.getElementById('model_info').textContent =
+    `architecture=${m.architecture}  loaded=${m.loaded}  device=${m.device}  ` +
+    `training_metrics_available=${m.training_metrics_available}  last_inference_ms=${fmt(m.inference_latency_ms)}`;
+}
+
+function renderDetection(d) {
+  if (!d) return;
+  document.getElementById('detected').textContent = d.detected ? 'YES' : 'NO';
+  document.getElementById('detected').className = d.detected ? 'ok' : 'warn';
+  document.getElementById('freq').textContent = d.frequency_hz ? d.frequency_hz.toFixed(1) + ' Hz' : '-';
+  document.getElementById('bearing_avail').textContent = d.bearing_available ? 'YES' : 'NO';
+  const bearingText = d.bearing_available && d.estimated_bearing_deg !== null ? d.estimated_bearing_deg.toFixed(1) + ' deg' : 'N/A';
+  document.getElementById('bearing').textContent = bearingText;
+  document.getElementById('req_snr').textContent = fmt(d.requested_snr_db, ' dB');
+  document.getElementById('meas_snr').textContent = fmt(d.measured_snr_db, ' dB');
+  document.getElementById('segconf').textContent = d.segformer_confidence !== null && d.segformer_confidence !== undefined ? (d.segformer_confidence*100).toFixed(1) + '%' : '-';
+  document.getElementById('cls').textContent = d.classification || '-';
+  document.getElementById('clsconf').textContent = d.classification_confidence !== null && d.classification_confidence !== undefined ? (d.classification_confidence*100).toFixed(1) + '%' : '-';
+  document.getElementById('track').textContent = d.track_id ?? '-';
+  document.getElementById('trackstatus').textContent = d.track_status || '-';
+
+  if (d.beam_spectrum) drawBeamPlot(d.beam_spectrum.angles_deg, d.beam_spectrum.power_db);
+}
+
+function drawBeamPlot(angles, powerDb) {
+  const c = document.getElementById('beamplot');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  if (!angles || !angles.length) return;
+  const maxP = Math.max(...powerDb), minP = Math.min(...powerDb);
+  ctx.strokeStyle = '#0af';
+  ctx.beginPath();
+  angles.forEach((a,i) => {
+    const x = (a+90)/180 * c.width;
+    const y = c.height - ((powerDb[i]-minP)/(maxP-minP+1e-9)) * (c.height-10) - 5;
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+async function drawSpectrogram() {
+  try {
+    const r = await fetch('/api/spectrogram'); const d = await r.json();
+    const c = document.getElementById('spectro'); const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    if (!d.available) return;
+    const S = d.magnitude, M = d.detection_mask;
+    const nF = S.length, nT = S[0].length;
+    const cellW = c.width/nT, cellH = c.height/nF;
+    let vmax=-Infinity, vmin=Infinity;
+    for (const row of S) for (const v of row) { if (v>vmax) vmax=v; if (v<vmin) vmin=v; }
+    for (let f=0; f<nF; f++) for (let t=0; t<nT; t++) {
+      const norm = (S[f][t]-vmin)/(vmax-vmin+1e-9);
+      const g = Math.floor(norm*255);
+      ctx.fillStyle = `rgb(0,${g},0)`;
+      ctx.fillRect(t*cellW, c.height-(f+1)*cellH, cellW+1, cellH+1);
+      if (M[f][t]) {
+        ctx.fillStyle = `rgba(255,0,0,0.35)`;
+        ctx.fillRect(t*cellW, c.height-(f+1)*cellH, cellW+1, cellH+1);
+      }
+    }
+  } catch (e) { /* spectrogram not ready yet */ }
+}
+
+async function poll() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    renderStatus(s);
+    const d = await (await fetch('/api/latest_detection')).json();
+    renderDetection(d);
+    await drawSpectrogram();
+  } catch (e) { log('poll error: ' + e.message); }
+}
+setInterval(poll, 1500);
+poll();
+
+async function analyzeFile(inputId, url) {
+  const f = document.getElementById(inputId).files[0];
+  if (!f) { alert('choose a file'); return; }
+  const fd = new FormData(); fd.append('file', f);
+  log('analyzing ' + f.name + ' via ' + url + ' ...');
+  const r = await fetch(url, {method:'POST', body: fd});
+  const d = await r.json();
+  if (d.error) { log('ERROR [' + d.error.code + ']: ' + d.error.message); alert(d.error.message); return; }
+  log('result: ' + JSON.stringify(d));
+  renderDetection(d);
+}
+</script>
+</body>
+</html>

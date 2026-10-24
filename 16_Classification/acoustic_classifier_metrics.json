@@ -1,0 +1,56 @@
+{
+  "trained_on": "synthetic data only (see module docstring)",
+  "n_train": 337,
+  "n_test": 113,
+  "accuracy": 0.9026548672566371,
+  "per_class": {
+    "SHIP_LIKE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "BIOLOGICAL": {
+      "precision": 0.8648648648648649,
+      "recall": 0.8421052631578947,
+      "f1": 0.8533333333333334
+    },
+    "UNKNOWN": {
+      "precision": 0.8421052631578947,
+      "recall": 0.8648648648648649,
+      "f1": 0.8533333333333334
+    }
+  },
+  "confusion_matrix": [
+    [
+      38,
+      0,
+      0
+    ],
+    [
+      0,
+      32,
+      6
+    ],
+    [
+      0,
+      5,
+      32
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "SHIP_LIKE",
+    "BIOLOGICAL",
+    "UNKNOWN"
+  ],
+  "feature_importances": {
+    "dominant_freq_hz": 0.035095793216236015,
+    "freq_stability_hz": 0.06921137472795064,
+    "am_depth": 0.17986092587703076,
+    "am_rate_hz_est": 0.11505817901172945,
+    "spectral_centroid_hz": 0.03405573949624438,
+    "bandwidth_hz": 0.03878708014738998,
+    "n_harmonics_detected": 0.12742067139635518,
+    "energy_rms": 0.057822255144602375,
+    "duration_s": 0.34268798098246117
+  }
+}

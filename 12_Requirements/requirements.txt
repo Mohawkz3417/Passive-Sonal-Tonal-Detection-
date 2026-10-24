@@ -1,0 +1,30 @@
+# NPOL Tonal Detection Suite -- Python dependencies
+# Tested with Python 3.10-3.12, CPU-only (no CUDA required).
+#
+# Windows install (recommended):
+#   python -m venv venv
+#   venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# If you have an NVIDIA GPU and want faster training, install the matching
+# CUDA build of torch from https://pytorch.org/get-started/locally/ instead
+# of the line below.
+
+torch>=2.2,<3.0
+numpy>=1.24
+scipy>=1.10
+opencv-python>=4.8
+scikit-image>=0.21
+scikit-learn>=1.3
+matplotlib>=3.7
+onnx>=1.15
+onnxruntime>=1.16
+pytest>=7.4
+soundfile>=0.12   # robust WAV/FLAC reading for real datasets (ShipsEar/DeepShip/DS3500/etc.)
+pyyaml>=6.0       # config.yaml (13_Scripts/config_loader.py) -- falls back to built-in
+                   # defaults with a warning if this isn't installed, so it's a soft dependency
+psutil>=5.9       # CPU/RAM usage in the Live GUI and deploy.py -- optional, GUI shows "n/a"
+                   # instead of failing if this isn't installed
+
+# Live GUI (Tkinter ships with the standard CPython Windows/Mac installer;
+# on Ubuntu/Debian Linux install the OS package: sudo apt install python3-tk)

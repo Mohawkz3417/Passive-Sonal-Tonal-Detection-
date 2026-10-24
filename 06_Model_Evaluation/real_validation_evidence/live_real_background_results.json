@@ -1,0 +1,83 @@
+[
+  {
+    "case": "ShipsEar bg, SNR=-5dB",
+    "dataset": "shipsear",
+    "snr_db": -5,
+    "detected": true,
+    "freq_err_hz": 5.113348906174849,
+    "bearing_err_deg": 24.0,
+    "measured_snr_db": 3.3458036198983283
+  },
+  {
+    "case": "ShipsEar bg, SNR=-10dB",
+    "dataset": "shipsear",
+    "snr_db": -10,
+    "detected": true,
+    "freq_err_hz": 1167.3219706860577,
+    "bearing_err_deg": 40.0,
+    "measured_snr_db": 5.885121025353839
+  },
+  {
+    "case": "ShipsEar bg, SNR=-15dB",
+    "dataset": "shipsear",
+    "snr_db": -15,
+    "detected": false,
+    "freq_err_hz": null,
+    "bearing_err_deg": 60.0,
+    "measured_snr_db": 7.743141762674755
+  },
+  {
+    "case": "DS3500 bg, SNR=-5dB",
+    "dataset": "ds3500",
+    "snr_db": -5,
+    "detected": true,
+    "freq_err_hz": 442.47325460774175,
+    "bearing_err_deg": 6.0,
+    "measured_snr_db": 2.731750764221836
+  },
+  {
+    "case": "DS3500 bg, SNR=-10dB",
+    "dataset": "ds3500",
+    "snr_db": -10,
+    "detected": false,
+    "freq_err_hz": null,
+    "bearing_err_deg": 70.0,
+    "measured_snr_db": 2.1696561750284844
+  },
+  {
+    "case": "DS3500 bg, SNR=-15dB",
+    "dataset": "ds3500",
+    "snr_db": -15,
+    "detected": true,
+    "freq_err_hz": 321.7112629060416,
+    "bearing_err_deg": 43.0,
+    "measured_snr_db": 5.80186133976331
+  },
+  {
+    "case": "Ocean ambient bg, SNR=-5dB",
+    "dataset": "ocean_ambient",
+    "snr_db": -5,
+    "detected": true,
+    "freq_err_hz": 5.2913762172432826,
+    "bearing_err_deg": 16.0,
+    "measured_snr_db": 2.404620307855353
+  },
+  {
+    "case": "Ocean ambient bg, SNR=-10dB",
+    "dataset": "ocean_ambient",
+    "snr_db": -10,
+    "detected": true,
+    "freq_err_hz": 5.553332759834575,
+    "bearing_err_deg": 55.0,
+    "measured_snr_db": 7.403729197227202
+  },
+  {
+    "case": "Ocean ambient bg, SNR=-15dB",
+    "dataset": "ocean_ambient",
+    "snr_db": -15,
+    "detected": true,
+    "freq_err_hz": 880.368964926517,
+    "bearing_err_deg": 0.0,
+    "measured_snr_db": 3.0475351434849296
+  }
+]
