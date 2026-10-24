@@ -1,4 +1,4 @@
-# NPOL Tonal Detection Suite
+# Tonal Detection Suite
 
 AI-based passive sonar **tonal detection** system: an 8-element hydrophone
 array simulation feeds a transformer-based spectrogram segmentation model
